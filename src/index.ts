@@ -41,8 +41,11 @@ async function startHttp(port: number): Promise<void> {
   // Keep track of active sessions
   const sessions = new Map<string, { server: McpServer; transport: SSEServerTransport }>();
 
+  // Serve the presentation website
+  app.use(express.static('website/dist'));
+
   // Health check endpoint
-  app.get('/', (_req, res) => {
+  app.get('/health', (_req, res) => {
     res.json({
       name: 'workadu-mcp-server',
       version: '1.0.0',
