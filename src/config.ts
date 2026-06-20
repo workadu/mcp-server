@@ -2,7 +2,7 @@
  * Workadu MCP Server — Configuration
  *
  * Reads environment variables and provides typed config.
- * Variables can be set via .env file or passed through MCP client config.
+ * Variables can be set via .env file or passed dynamically per-request via HTTP headers.
  */
 
 export interface WorkaduConfig {
@@ -14,22 +14,22 @@ export interface WorkaduConfig {
   apiVersion: string;
 }
 
-export function loadConfig(): WorkaduConfig {
-  const apiUrl = process.env.WORKADU_API_URL;
-  const apiKey = process.env.WORKADU_API_KEY;
-  const apiVersion = process.env.WORKADU_API_VERSION ?? 'v2';
+export function loadConfig(overrides?: Partial<WorkaduConfig>): WorkaduConfig {
+  const apiUrl = overrides?.apiUrl || process.env.WORKADU_API_URL;
+  const apiKey = overrides?.apiKey || process.env.WORKADU_API_KEY;
+  const apiVersion = overrides?.apiVersion || process.env.WORKADU_API_VERSION || 'v2';
 
   if (!apiUrl) {
     throw new Error(
-      'WORKADU_API_URL environment variable is required. ' +
-      'Set it to your Workadu instance URL (e.g., https://your-app.workadu.com)'
+      'WORKADU_API_URL is missing. Please set it in your environment ' +
+      'or provide it via the X-Workadu-Api-Url HTTP header.'
     );
   }
 
   if (!apiKey) {
     throw new Error(
-      'WORKADU_API_KEY environment variable is required. ' +
-      'Set it to your Workadu API key (from CompanyUser settings)'
+      'WORKADU_API_KEY is missing. Please set it in your environment ' +
+      'or provide it via the Authorization (Bearer) HTTP header.'
     );
   }
 

@@ -8,6 +8,12 @@ primary_region = 'ams'
 
 [build]
 
+[env]
+  PORT = "8080"
+  # No API keys or URLs are hardcoded here anymore!
+  # The server is now multi-tenant. Each user provides their own credentials
+  # via HTTP headers from their Claude/Cursor client.
+
 [http_service]
   internal_port = 8080
   force_https = true
