@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Workadu MCP Server - Integrate your Workadu CRM, Bookings, and Invoices with AI assistants like Claude and Cursor." />
+    <title>Workadu MCP Server</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <!-- Navbar -->
+    <nav class="navbar glass">
+      <div class="nav-container">
+        <div class="logo">Workadu<span>MCP</span></div>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#setup">Setup Guide</a>
+          <a href="https://github.com/workadu/mcp-server" target="_blank" class="github-link">GitHub</a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="hero">
+      <div class="hero-bg-glow"></div>
+      <div class="hero-content fade-in-up">
+        <span class="badge">v1.0.0 is live</span>
+        <h1 class="hero-title">Bring Your Workadu Data<br/>to the <span class="gradient-text">AI Era</span></h1>
+        <p class="hero-subtitle">
+          Seamlessly integrate your CRM, Bookings, and Invoices with Claude, Cursor, and other AI assistants using the Model Context Protocol.
+        </p>
+        <div class="hero-cta">
+          <a href="#setup" class="btn btn-primary">Get Started</a>
+          <a href="https://github.com/workadu/mcp-server" target="_blank" class="btn btn-secondary">View Source</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Features Section -->
+    <section id="features" class="features section">
+      <div class="section-header fade-in">
+        <h2>38 Powerful Tools</h2>
+        <p>Give your AI agent complete access to your Workadu workspace.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card glass hover-lift">
+          <div class="feature-icon">📦</div>
+          <h3>Orders & Bookings</h3>
+          <p>List, create, update, and cancel bookings. Automatically check availability and send email confirmations.</p>
+        </div>
+        <div class="feature-card glass hover-lift">
+          <div class="feature-icon">👥</div>
+          <h3>Customers</h3>
+          <p>Search through your CRM. Create new customer records or update existing ones seamlessly.</p>
+        </div>
+        <div class="feature-card glass hover-lift">
+          <div class="feature-icon">🧾</div>
+          <h3>Invoices & AADE</h3>
+          <p>Draft invoices, add line items, manage withholdings, and publish directly to the Greek tax authority (AADE).</p>
+        </div>
+        <div class="feature-card glass hover-lift">
+          <div class="feature-icon">🛎️</div>
+          <h3>Services</h3>
+          <p>Manage your products and services catalog. Read descriptions, prices, and update availability.</p>
+        </div>
+        <div class="feature-card glass hover-lift">
+          <div class="feature-icon">💰</div>
+          <h3>Payments</h3>
+          <p>Track financial transactions, create new payment records, and link them to orders and invoices.</p>
+        </div>
+        <div class="feature-card glass hover-lift">
+          <div class="feature-icon">🏭</div>
+          <h3>Assets (DCL)</h3>
+          <p>Manage physical assets and track their movements (dispatch notes, transfers) via the Digital Consignment Ledger.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Setup Guide Section -->
+    <section id="setup" class="setup section">
+      <div class="section-header fade-in">
+        <h2>Setup Guide</h2>
+        <p>Connect your AI assistant in minutes. Choose your environment.</p>
+      </div>
+      
+      <div class="setup-container">
+        <div class="setup-tabs">
+          <button class="tab-btn active" data-target="desktop-setup">Desktop Apps (Local)</button>
+          <button class="tab-btn" data-target="web-setup">Web / Cloud (Remote)</button>
+        </div>
+
+        <div class="setup-content">
+          <!-- Desktop Setup -->
+          <div id="desktop-setup" class="setup-pane active fade-in">
+            <div class="setup-step glass">
+              <h3>1. Clone & Build</h3>
+              <p>Run this locally on your machine to start the stdio server.</p>
+              <pre><code>git clone https://github.com/workadu/mcp-server.git
+cd mcp-server
+npm install
+npm run build</code></pre>
+            </div>
+            <div class="setup-step glass">
+              <h3>2. Configure your AI Client</h3>
+              <p>Add this to your Claude Desktop config (<code>claude_desktop_config.json</code>) or Cursor config (<code>.cursor/mcp.json</code>).</p>
+              <pre><code>{
+  "mcpServers": {
+    "workadu": {
+      "command": "node",
+      "args": ["/absolute/path/to/mcp-server/dist/index.js"],
+      "env": {
+        "WORKADU_API_URL": "https://your-app.workadu.com",
+        "WORKADU_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}</code></pre>
+            </div>
+          </div>
+
+          <!-- Web Setup -->
+          <div id="web-setup" class="setup-pane fade-in" style="display: none;">
+            <div class="setup-step glass">
+              <h3>1. Use the Remote Server</h3>
+              <p>The server is already hosted on Fly.io and supports SSE (Server-Sent Events) over HTTP.</p>
+              <div class="endpoint-box">
+                <span class="endpoint-label">Endpoint:</span>
+                <span class="endpoint-url">https://mcp-server-tepc4a.fly.dev/sse</span>
+              </div>
+            </div>
+            <div class="setup-step glass">
+              <h3>2. Configure your AI Client</h3>
+              <p>Add this to your Claude Desktop config. The remote server uses headers to authenticate per-session.</p>
+              <pre><code>{
+  "mcpServers": {
+    "workadu": {
+      "url": "https://mcp-server-tepc4a.fly.dev/sse",
+      "headers": {
+        "Authorization": "Bearer your-api-key-here",
+        "X-Workadu-Api-Url": "https://your-app.workadu.com"
+      }
+    }
+  }
+}</code></pre>
+            </div>
+             <div class="setup-step glass">
+                <h3>⚠️ Important Note</h3>
+                <p>When using the remote server, your Workadu instance must be accessible from the public internet. Local URLs (like <code>http://workadu.local</code>) will not work unless tunneled via ngrok.</p>
+             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <p>&copy; <span id="year"></span> Workadu. All rights reserved.</p>
+        <p class="footer-sub">Model Context Protocol Integration</p>
+      </div>
+    </footer>
+
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
