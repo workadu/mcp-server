@@ -1,3 +1,6 @@
 node_modules/
 dist/
 .env
+
+# Allow website dist to be committed
+!website/dist/
