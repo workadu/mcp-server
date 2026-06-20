@@ -1,13 +1,14 @@
 :root {
-  --bg-dark: #0a0a0c;
-  --bg-panel: #111114;
+  --bg-dark: #09051a;
+  --bg-panel: #191533;
   --bg-card: rgba(255, 255, 255, 0.03);
   --border-light: rgba(255, 255, 255, 0.08);
   --text-primary: #ffffff;
-  --text-muted: #8a8a93;
-  --accent: #5e6ad2;
-  --accent-glow: rgba(94, 106, 210, 0.4);
-  --terminal-bg: #0d0d10;
+  --text-muted: #a19fc1;
+  --accent: #94ffa9;
+  --accent-glow: rgba(148, 255, 169, 0.3);
+  --btn-bg: #342476;
+  --terminal-bg: #0d0920;
   
   --font-sans: 'Outfit', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -133,8 +134,8 @@ body {
 }
 
 .btn-primary {
-  background: var(--text-primary);
-  color: var(--bg-dark);
+  background: var(--btn-bg);
+  color: var(--text-primary);
 }
 
 .btn-primary:hover {
