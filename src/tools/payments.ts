@@ -19,6 +19,10 @@ export function registerPaymentTools(server: McpServer, client: WorkaduClient): 
       id: z.number().int().positive().optional().describe('Optional payment ID to retrieve a specific payment'),
       page: z.number().int().positive().optional().describe('Page number for pagination'),
       per_page: z.number().int().positive().optional().describe('Number of results per page'),
+      customer_id: z.number().int().positive().optional().describe('Filter by customer ID'),
+      from_date: z.string().optional().describe('Filter from payment issue date (YYYY-MM-DD), inclusive'),
+      to_date: z.string().optional().describe('Filter to payment issue date (YYYY-MM-DD), inclusive'),
+      sort: z.string().optional().describe('Sort by a payment field; prefix with - for descending'),
     },
     async (params) => {
       try {
@@ -26,6 +30,10 @@ export function registerPaymentTools(server: McpServer, client: WorkaduClient): 
         const result = await client.get(path, {
           page: params.page,
           per_page: params.per_page,
+          customer_id: params.customer_id,
+          issue_date_from: params.from_date,
+          issue_date_to: params.to_date,
+          sort: params.sort,
         });
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],

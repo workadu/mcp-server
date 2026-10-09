@@ -25,7 +25,11 @@ export function registerCustomerTools(server: McpServer, client: WorkaduClient):
     },
     async ({ page, per_page, search }) => {
       try {
-        const result = await client.get('/customers', { page, per_page, search });
+        const result = await client.get('/customers', {
+          page,
+          per_page,
+          'filter[search_term]': search,
+        });
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
         };

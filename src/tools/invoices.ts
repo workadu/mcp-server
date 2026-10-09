@@ -21,12 +21,13 @@ export function registerInvoiceTools(server: McpServer, client: WorkaduClient): 
     'List invoices/documents with optional filters. Statuses: CANCELED=0, PUBLISHED=1, DRAFT=2, PREVIEW=99.',
     {
       page: z.number().int().positive().optional().describe('Page number for pagination'),
-      per_page: z.number().int().positive().optional().describe('Results per page'),
+      per_page: z.number().int().positive().optional().describe('Requested results per page; the current REST API always returns up to 100'),
       status: z.number().int().optional().describe('Filter by status (0=Canceled, 1=Published, 2=Draft, 99=Preview)'),
       customer_id: z.number().int().positive().optional().describe('Filter by customer ID'),
-      from_date: z.string().optional().describe('Filter from date (YYYY-MM-DD)'),
-      to_date: z.string().optional().describe('Filter to date (YYYY-MM-DD)'),
+      from_date: z.string().optional().describe('Filter from issue date (YYYY-MM-DD); provide to_date as well'),
+      to_date: z.string().optional().describe('Filter to issue date (YYYY-MM-DD); provide from_date as well'),
       series_id: z.number().int().positive().optional().describe('Filter by invoice series ID'),
+      sort: z.string().optional().describe('Sort the current page by an invoice field; prefix with - for descending. REST sorts after pagination, not across all pages'),
     },
     async (params) => {
       try {
@@ -35,9 +36,10 @@ export function registerInvoiceTools(server: McpServer, client: WorkaduClient): 
           per_page: params.per_page,
           status: params.status,
           customer_id: params.customer_id,
-          from_date: params.from_date,
-          to_date: params.to_date,
+          issue_date_from: params.from_date,
+          issue_date_to: params.to_date,
           series_id: params.series_id,
+          sort: params.sort,
         });
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
@@ -231,6 +233,10 @@ export function registerInvoiceTools(server: McpServer, client: WorkaduClient): 
       notes: z.string().optional().describe('Updated customer-facing notes'),
       admin_notes: z.string().optional().describe('Updated internal admin notes'),
       due_date: z.string().optional().describe('Payment due date (YYYY-MM-DD)'),
+      transporter_id: z.number().int().positive().optional().describe('Transporter contact ID'),
+      shipping_address: z.string().optional().describe('Shipping address'),
+      dispatch_date: z.string().optional().describe('Dispatch date (YYYY-MM-DD)'),
+      dispatch_time: z.string().optional().describe('Dispatch time (HH:mm:ss)'),
       tags: z.string().min(1).optional().describe('Complete list of tag names separated by commas. Replaces existing tags; include any tags you want to keep. Clearing all tags is not supported by the REST endpoint.'),
     },
     async (params) => {
@@ -260,15 +266,18 @@ export function registerInvoiceTools(server: McpServer, client: WorkaduClient): 
 
   server.tool(
     'publish_invoice',
-    'Publish/finalize a draft invoice. WARNING: This is IRREVERSIBLE — once published, the invoice is submitted to AADE (Greek tax authority) and cannot be edited.',
+    'Publish a draft invoice or request myDATA submission for an already VALID invoice with aade_send=true. Publishing and submission have financial effects. An OK response alone does not confirm AADE acceptance; inspect meta.myData or any pending POS response.',
     {
-      invoice_id: z.number().int().positive().describe('The draft invoice ID to publish/finalize'),
+      invoice_id: z.number().int().positive().describe('The draft or VALID invoice ID'),
+      aade_send: z.boolean().optional().describe('Explicitly request or disable myDATA submission. If omitted, the REST API uses automatic-send settings'),
+      send: z.boolean().optional().describe('Whether to send the invoice notification to the customer'),
     },
     async (params) => {
       try {
-        const result = await client.post('/invoices/publish', {
-          invoice_id: params.invoice_id,
-        });
+        const body: Record<string, unknown> = { invoice_id: params.invoice_id };
+        if (params.aade_send !== undefined) body.aade_send = params.aade_send;
+        if (params.send !== undefined) body.send = params.send;
+        const result = await client.post('/invoices/publish', body);
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
         };

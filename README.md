@@ -172,6 +172,25 @@ replaces the invoice's tags, so include existing tags that should be kept.
 The REST endpoint does not support clearing all tags with an empty string.
 Updating contact tags still requires a REST API change.
 
+`update_invoice` also accepts `transporter_id`, `shipping_address`,
+`dispatch_date` (YYYY-MM-DD), and `dispatch_time` (HH:mm:ss). Automatic payment
+and editing/deleting invoice lines still require REST API support.
+
+`publish_invoice` accepts optional `aade_send` and `send`.
+Set `aade_send: true` to explicitly request myDATA
+submission, including for an already VALID invoice. Omitted options remain
+omitted from the REST request. Check the returned `meta.myData` or pending POS
+response; HTTP success alone does not confirm AADE acceptance.
+
+Invoice and payment listing map `from_date`/`to_date` to REST
+`issue_date_from`/`issue_date_to`. Invoice date filtering requires both bounds.
+Payments can also be filtered by `customer_id`. Both tools accept `sort`
+(prefix the field with `-` for descending), but invoice sorting affects only
+the current page. The invoice REST endpoint still fixes page size at 100.
+Customer `search` is sent using the REST `filter[search_term]` parameter.
+Customer balance and configurable invoice pagination/global sorting still
+require REST API changes.
+
 `create_payment` accepts optional `invoice_ids` as a comma-separated string.
 For all payments, it sends `amount` as REST `deposit`, `series_id` as REST
 `series`, and optional `comments` as REST `comment`. Choose the appropriate
