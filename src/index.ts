@@ -108,7 +108,7 @@ async function startHttp(port: number): Promise<void> {
     }
 
     try {
-      await session.transport.handlePostMessage(req, res);
+      await session.transport.handlePostMessage(req, res, req.body);
     } catch (error: any) {
       console.error('[Message Error]', error.message);
       res.status(500).json({ error: error.message });
