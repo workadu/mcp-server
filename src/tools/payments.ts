@@ -51,9 +51,9 @@ export function registerPaymentTools(server: McpServer, client: WorkaduClient): 
 
   server.tool(
     'create_payment',
-    'Create a new payment. Requires issue date, customer, series, amount, and currency.',
+    'Create a new payment. Requires customer, series, amount, and currency. The issue date is optional and defaults to today.',
     {
-      issue_date: z.string().describe('Issue date of the payment (YYYY-MM-DD)'),
+      issue_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe('Optional payment date (YYYY-MM-DD); defaults to today'),
       customer_id: z.number().int().positive().describe('ID of the customer'),
       series_id: z.number().int().positive().describe('ID of the payment series'),
       amount: z.number().positive().describe('Payment amount'),
@@ -67,12 +67,12 @@ export function registerPaymentTools(server: McpServer, client: WorkaduClient): 
     async (params) => {
       try {
         const body: Record<string, unknown> = {
-          issue_date: params.issue_date,
           customer_id: params.customer_id,
           series: params.series_id,
           deposit: params.amount,
           currency_iso: params.currency_iso,
         };
+        if (params.issue_date !== undefined) body.issue_date = params.issue_date;
         if (params.currency_rate !== undefined) body.currency_rate = params.currency_rate;
         if (params.comments !== undefined) body.comment = params.comments;
         if (params.order_id !== undefined) body.order_id = params.order_id;

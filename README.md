@@ -201,9 +201,10 @@ require REST API changes.
 For all payments, it sends `amount` as REST `deposit`, `series_id` as REST
 `series`, and optional `comments` as REST `comment`. Choose the appropriate
 payment or refund series; `invoice_ids` links the payment to those invoices.
-The current REST endpoint assigns the creation date and the company's currency,
-regardless of the supplied `issue_date` and `currency_iso`; backdated payments
-require REST API support.
+It also accepts optional `issue_date` in `YYYY-MM-DD` format and sends it as
+the payment date. Omit it to use today's date; historical dates are supported.
+The REST endpoint uses the company's configured currency regardless of the
+supplied `currency_iso` value.
 
 ### Assets (DCL)
 | Tool | Description |
