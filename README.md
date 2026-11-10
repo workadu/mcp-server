@@ -162,6 +162,12 @@ Invoice creation and update accept optional `payment_type`: the Workadu payment
 - `tags`: an array of tag names or an array of existing tag IDs.
 - `referrer_unique_id`: an external reference for the REST API's duplicate detection.
 
+Each `create_invoice_with_lines` line also accepts optional `oss_vat` as a
+numeric rate from 0 to 100. It is valid only for an OSS-enabled invoice series;
+the API derives `oss_country` from the customer's country and rejects country
+overrides. OSS invoice responses expose `oss_vat` and `oss_country` on the
+affected lines. `add_invoice_line` accepts the same `oss_vat` input.
+
 The tool sends `customer_id` as `customer.id` and nests invoice fields under
 `invoice`, including `currency_iso` as REST `currency`. Line `unit_price` is
 sent as `amount`, and optional `discount_percent` as `line_discount`.

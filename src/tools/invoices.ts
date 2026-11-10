@@ -135,6 +135,7 @@ export function registerInvoiceTools(server: McpServer, client: WorkaduClient): 
         quantity: z.number().positive().describe('Quantity'),
         unit_price: z.number().describe('Unit price (net or gross depending on includes_vat)'),
         vat_percent: z.number().describe('VAT percentage (e.g. 24 for 24% Greek standard rate)'),
+        oss_vat: z.number().min(0).max(100).optional().describe('Optional OSS VAT rate (0-100); valid only for OSS-enabled series'),
         discount_percent: z.number().optional().describe('Discount percentage (0-100)'),
       })).min(1).describe('Array of invoice line items (at least one required)'),
       includes_vat: z.boolean().optional().describe('Whether prices include VAT'),
@@ -158,10 +159,11 @@ export function registerInvoiceTools(server: McpServer, client: WorkaduClient): 
         const body = {
           customer: { id: params.customer_id },
           invoice,
-          lines: params.lines.map(({ unit_price, discount_percent, ...line }) => ({
+          lines: params.lines.map(({ unit_price, discount_percent, oss_vat, ...line }) => ({
             ...line,
             amount: unit_price,
             ...(discount_percent !== undefined ? { line_discount: discount_percent } : {}),
+            ...(oss_vat !== undefined ? { oss_vat } : {}),
           })),
         };
 
@@ -189,6 +191,7 @@ export function registerInvoiceTools(server: McpServer, client: WorkaduClient): 
       quantity: z.number().positive().describe('Quantity'),
       unit_price: z.number().describe('Unit price'),
       vat_percent: z.number().describe('VAT percentage (e.g. 24 for 24%)'),
+      oss_vat: z.number().min(0).max(100).optional().describe('Optional OSS VAT rate (0-100); valid only for OSS-enabled series'),
       discount_percent: z.number().optional().describe('Discount percentage (0-100)'),
       service_id: z.number().int().positive().optional().describe('Optional service/product ID to link'),
     },
@@ -202,6 +205,7 @@ export function registerInvoiceTools(server: McpServer, client: WorkaduClient): 
           vat_percent: params.vat_percent,
         };
         if (params.discount_percent !== undefined) body.discount_percent = params.discount_percent;
+        if (params.oss_vat !== undefined) body.oss_vat = params.oss_vat;
         if (params.service_id !== undefined) body.service_id = params.service_id;
 
         const result = await client.post('/invoiceline', body);

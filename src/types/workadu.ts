@@ -172,6 +172,8 @@ export interface WorkaduInvoiceLine {
   unit_price?: number;
   net_amount?: number;
   vat_percent?: number;
+  oss_vat?: number;
+  oss_country?: string;
   discount_percent?: number;
   total?: number;
 }
