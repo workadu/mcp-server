@@ -31,8 +31,14 @@ export class WorkaduClient {
 
   constructor(private readonly config: WorkaduConfig) {
     this.baseUrl = config.apiUrl;
-    // Dingo API uses Basic Auth: api_key as username, empty password
-    this.authHeader = `Basic ${Buffer.from(config.apiKey + ':').toString('base64')}`;
+    if (config.accessToken) {
+      this.authHeader = `Bearer ${config.accessToken}`;
+    } else if (config.apiKey) {
+      // Dingo API uses Basic Auth: api_key as username, empty password
+      this.authHeader = `Basic ${Buffer.from(config.apiKey + ':').toString('base64')}`;
+    } else {
+      throw new Error('WorkaduClient requires either accessToken or apiKey');
+    }
     // Dingo version header
     this.acceptHeader = `application/vnd.rengine.${config.apiVersion}+json`;
   }
