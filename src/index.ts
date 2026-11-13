@@ -10,8 +10,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import express, { type Request, type Response } from 'express';
-import { loadConfig } from './config.js';
+import { loadConfig, type WorkaduConfig } from './config.js';
 import { WorkaduClient } from './client/workadu-client.js';
 import { registerAllTools } from './tools/index.js';
 import {
@@ -21,6 +22,8 @@ import {
   isJwt,
   loadOAuthConfig,
   resolveResourceUrl,
+  type OAuthConfig,
+  type VerifyJwtFn,
 } from './auth/oauth.js';
 
 function createServer(client: WorkaduClient): McpServer {
@@ -49,6 +52,49 @@ function extractBearerToken(req: Request): string | undefined {
   return match ? match[1].trim() : undefined;
 }
 
+async function authenticateRequest(
+  req: Request,
+  res: Response,
+  oauthConfig: OAuthConfig,
+  verifyBearerToken: VerifyJwtFn,
+): Promise<WorkaduConfig | undefined> {
+  const resourceUrl = resolveResourceUrl(req, oauthConfig.resourceUrl);
+
+  try {
+    const bearerToken = extractBearerToken(req);
+    const apiKeyHeader = req.header('x-workadu-api-key');
+    const apiUrl = req.header('x-workadu-api-url');
+
+    let accessToken: string | undefined;
+    let legacyApiKey = apiKeyHeader;
+
+    if (bearerToken) {
+      if (isJwt(bearerToken)) {
+        try {
+          const claims = await verifyBearerToken(bearerToken);
+          accessToken = bearerToken;
+          console.log(`[Auth] Verified JWT for sub=${claims.sub ?? 'unknown'}`);
+        } catch (err: any) {
+          console.warn('[Auth] JWT verification failed:', err.message);
+          res.setHeader('WWW-Authenticate', buildWwwAuthenticateHeader(resourceUrl, 'invalid_token'));
+          res.status(401).json({ error: 'Invalid or expired Bearer token' });
+          return undefined;
+        }
+      } else {
+        // Legacy production clients may pass their Workadu API key as Authorization: Bearer <api_key>
+        legacyApiKey = legacyApiKey || bearerToken;
+      }
+    }
+
+    return loadConfig({ accessToken, apiKey: legacyApiKey, apiUrl });
+  } catch (error: any) {
+    console.error('[Auth Error]', error.message);
+    res.setHeader('WWW-Authenticate', buildWwwAuthenticateHeader(resourceUrl));
+    res.status(401).json({ error: error.message });
+    return undefined;
+  }
+}
+
 async function startHttp(port: number): Promise<void> {
   const app = express();
   app.set('trust proxy', 1);
@@ -57,7 +103,7 @@ async function startHttp(port: number): Promise<void> {
   const oauthConfig = loadOAuthConfig();
   const verifyBearerToken = createJwtVerifier(oauthConfig);
 
-  // Keep track of active sessions
+  // Keep track of active SSE sessions
   const sessions = new Map<string, { server: McpServer; transport: SSEServerTransport }>();
 
   // Serve the presentation website
@@ -70,6 +116,7 @@ async function startHttp(port: number): Promise<void> {
     res.json(buildProtectedResourceMetadata(resourceUrl, oauthConfig));
   };
   app.get('/.well-known/oauth-protected-resource', protectedResourceHandler);
+  app.get('/.well-known/oauth-protected-resource/mcp', protectedResourceHandler);
   app.get('/.well-known/oauth-protected-resource/sse', protectedResourceHandler);
 
   // Health check endpoint
@@ -78,8 +125,9 @@ async function startHttp(port: number): Promise<void> {
       name: 'workadu-mcp-server',
       version: '1.0.0',
       status: 'running',
-      transport: 'sse',
+      transport: 'streamable-http,sse',
       endpoints: {
+        mcp: '/mcp',
         sse: '/sse',
         messages: '/messages',
         protectedResourceMetadata: '/.well-known/oauth-protected-resource',
@@ -91,38 +139,39 @@ async function startHttp(port: number): Promise<void> {
     });
   });
 
-  // 1. Initialize SSE Connection
-  app.get('/sse', async (req, res) => {
-    const resourceUrl = resolveResourceUrl(req, oauthConfig.resourceUrl);
+  // Streamable HTTP endpoint (modern MCP transport, stateless per-request)
+  app.all('/mcp', async (req, res) => {
+    const config = await authenticateRequest(req, res, oauthConfig, verifyBearerToken);
+    if (!config) return;
+
+    const client = new WorkaduClient(config);
+    const server = createServer(client);
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+    });
+
+    res.on('close', () => {
+      transport.close().catch(() => {});
+      server.close().catch(() => {});
+    });
 
     try {
-      const bearerToken = extractBearerToken(req);
-      const apiKeyHeader = req.header('x-workadu-api-key');
-      const apiUrl = req.header('x-workadu-api-url');
-
-      let accessToken: string | undefined;
-      let legacyApiKey = apiKeyHeader;
-
-      if (bearerToken) {
-        if (isJwt(bearerToken)) {
-          try {
-            const claims = await verifyBearerToken(bearerToken);
-            accessToken = bearerToken;
-            console.log(`[Auth] Verified JWT for sub=${claims.sub ?? 'unknown'}`);
-          } catch (err: any) {
-            console.warn('[Auth] JWT verification failed:', err.message);
-            res.setHeader('WWW-Authenticate', buildWwwAuthenticateHeader(resourceUrl, 'invalid_token'));
-            res.status(401).json({ error: 'Invalid or expired Bearer token' });
-            return;
-          }
-        } else {
-          // Legacy production clients may pass their Workadu API key as Authorization: Bearer <api_key>
-          legacyApiKey = legacyApiKey || bearerToken;
-        }
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } catch (error: any) {
+      console.error('[MCP Error]', error.message);
+      if (!res.headersSent) {
+        res.status(500).json({ error: error.message });
       }
+    }
+  });
 
-      // This will throw if neither Bearer JWT nor API key is available
-      const config = loadConfig({ accessToken, apiKey: legacyApiKey, apiUrl });
+  // 1. Initialize SSE Connection (legacy MCP transport)
+  app.get('/sse', async (req, res) => {
+    const config = await authenticateRequest(req, res, oauthConfig, verifyBearerToken);
+    if (!config) return;
+
+    try {
       const client = new WorkaduClient(config);
       const server = createServer(client);
 
@@ -142,8 +191,9 @@ async function startHttp(port: number): Promise<void> {
       });
     } catch (error: any) {
       console.error('[Session Error]', error.message);
-      res.setHeader('WWW-Authenticate', buildWwwAuthenticateHeader(resourceUrl));
-      res.status(401).json({ error: error.message });
+      if (!res.headersSent) {
+        res.status(500).json({ error: error.message });
+      }
     }
   });
 
